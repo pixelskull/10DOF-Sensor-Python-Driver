@@ -10,14 +10,26 @@ address2 = 0x53
 address3 = 0x68
 address4 = 0x77
 
-bus = SMBus(1) # for RasberryPi Model B+ (Model A = 0)
+# bus = SMBus(1) # for RasberryPi Model B+ (Model A = 0)
 
 
+class Bus_Hepler_i2c():
+	def __init__(self, bus_location=1):
+		self.bus = SMBus(bus_location)
+		
+	def write_byte(self, address, register, byte):
+		self.bus.write_i2c_block_data(address, register, [byte])
+		
+	def read_block_data(self, address, cmd): 
+		return self.bus.read_i2c_block_data(address, cmd)
+		
+	
 class MagnetometerValues(): 
 	def __init__(self, x, y, z):
 		self.x = x
 		self.y = y 
 		self.z = z 
+
 	
 class Magnetometer:
 	
@@ -26,6 +38,7 @@ class Magnetometer:
 		self.scale = 1.0
 		self.conf_register1 = 0x00
 		self.conf_register2 = 0x01
+		self.bus = Bus_Hepler_i2c()
 		
 	def set_scale(self, gauss=1.3):
 		# setup all register addresses for applied values
@@ -59,17 +72,14 @@ class Magnetometer:
 		reg_value = reg_pattern[gauss]
 		reg_value = reg_value << 5
 		# write to i2c bus 
-		self.write_byte(self.conf_register2, reg_value)
-	
-	def write_byte(self, register, byte):
-		bus.write_i2c_block_data(self.address, register, [byte])
+		self.bus.write_byte(self.address, self.conf_register2, reg_value)
 	
 	def write_continuous_command(self):
 		# 0x02 ist register for reading cmd and 0x00 is continuos reading 
-		self.write_byte(0x02, 0x00) 
+		self.bus.write_byte(self.address, 0x02, 0x00) 
 	
 	def read_magnetometer_buffer(self, begin=3, length=6):
-		tmp_block = bus.read_i2c_block_data(self.address, 0x00) # get buffer block 
+		tmp_block = self.bus.read_block_data(self.address, 0x00) # get buffer block 
 		
 		buffer = []
 		end = begin + length
@@ -117,6 +127,8 @@ class Magnetometer:
 		heading = heading * (180 / math.pi)
 		
 		return int(heading)
+
+
 
 
 # read this as tutorial then uncomment the main stuff 	
